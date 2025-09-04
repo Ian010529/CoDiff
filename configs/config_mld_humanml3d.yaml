@@ -1,0 +1,127 @@
+####################################
+# The following are general settings
+####################################
+
+# Experiment name, more details in Section 'Experiment Name Explanation'
+NAME: 16batch_CoDiff_mld_humanml3d
+# Debug mode. Set to True will enter the debug mode, then the program will
+# 1. use a tiny dataset for trianing and evaluation
+# 2. validate more intensively
+# 3. will not use `wandb logger`
+DEBUG: False
+# Devices. Optional: “cpu”, “gpu”
+ACCELERATOR: 'gpu'
+# Index of GPUs eg. [0] or [0,1,2,3]
+DEVICE: [0]
+
+#####################################
+# The following are training settings
+#####################################
+TRAIN:
+  # Model stage. Optional: "vae", "diffusion"
+  STAGE: diffusion
+  # Training dataset name
+  DATASETS: ['humanml3d']
+  # Number of dataloader workers
+  NUM_WORKERS: 8
+  # Size of batches
+  BATCH_SIZE: 64
+  # Total epochs for training
+  END_EPOCH: 700
+
+  RESUME: '' # Resume training from this path
+  PRETRAINED_VAE: 'checkpoints/mld_humanml3d_checkpoint/1222_mld_humanml3d_FID041.ckpt' # vae model path
+  OPTIM:
+    TYPE: AdamW # Optimizer type
+    LR: 1.0e-4 # Learning rate
+  # Ablation study configurations.
+  ABLATION:
+    SKIP_CONNECT: True
+    PE_TYPE: mld
+    DIFF_PE_TYPE: mld
+
+#####################################
+# The following are validation settings
+#####################################
+EVAL:
+  DATASETS: ['humanml3d'] # Evaluating datasets
+  BATCH_SIZE: 32 # Evaluating Batch size
+  SPLIT: test
+
+#####################################
+# The following are testing settings
+#####################################
+TEST:
+  # CHECKPOINTS: ./checkpoints/mld_humanml3d_checkpoint/1222_mld_humanml3d_FID041.ckpt
+  CHECKPOINTS: ./experiments/mld/16batch_CoDiff_mld_humanml3d/checkpoints/epoch=299.ckpt # Pretrained model path
+  DATASETS: ['humanml3d'] # training datasets
+  SPLIT: test
+  BATCH_SIZE: 256 # training Batch size
+  # BATCH_SIZE: 1 # training Batch size
+  MEAN: False
+  NUM_SAMPLES: 2048
+  # NUM_SAMPLES: 1
+  FACT: 1
+  # REPLICATION_TIMES: 1
+  # 启用计时器以监控训练和推理时间
+  COUNT_TIME: True
+
+#####################################
+# The following are basic datasets settings
+#####################################
+DATASET:
+  JOINT_TYPE: 'humanml3d' # join type
+
+#####################################
+# The following are metric settings
+#####################################
+METRIC:
+  TYPE: ['TemosMetric', 'TM2TMetrics']
+
+#####################################
+# The following are training losses settings
+#####################################
+LOSS:
+  TYPE: mld # Losses type
+  LAMBDA_LATENT: 1.0e-5 # Lambda for latent Losses
+  LAMBDA_KL: 1.0e-4 # Lambda for kl Losses
+  LAMBDA_REC: 1.0 # Lambda for reconstruction Losses
+  LAMBDA_GEN: 1.0 # Lambda for text-motion generation losses
+  LAMBDA_CROSS: 1.0 # Lambda for reconstruction Losses
+  LAMBDA_CYCLE: 0.0 # Lambda for cycle Losses
+  LAMBDA_PRIOR: 0.0
+  DIST_SYNC_ON_STEP: False # Sync Losses on step when distributed trained
+
+#####################################
+# The following are basic model settings
+#####################################
+model:
+  vae: true # whether vae model
+  model_type: mld # model type
+  condition: 'text'
+  latent_dim: [1, 256] # latent dimension
+  ff_size: 1024 #
+  num_layers: 9 # number of layers
+  num_head: 4 # number of head layers
+  droupout: 0.1 # dropout rate
+  activation: gelu # activation type
+  guidance_scale: 7.5 #
+  guidance_uncondp: 0.1 # 0.1 0.25
+
+  # --- ✅ 新增配置：用于激活和控制 LatentSelfAttention ---
+  use_latent_enhancer: true
+  latent_enhancer_heads: 8 # 这是LSA模块的注意力头数，4是一个合理的起点
+  # ----------------------------------------------------
+
+#####################################
+# The following are loggers settings
+#####################################
+LOGGER:
+  SACE_CHECKPOINT_EPOCH: 100
+  LOG_EVERY_STEPS: 1
+  VAL_EVERY_STEPS: 20
+  TENSORBOARD: True
+  WANDB:
+    PROJECT: null
+    OFFLINE: False
+    RESUME_ID: null

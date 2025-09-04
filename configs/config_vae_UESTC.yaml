@@ -1,0 +1,108 @@
+NAME: uestc_vae_train  # 实验名称
+DEBUG: False
+ACCELERATOR: 'gpu'
+DEVICE: [0]
+
+# ===============================
+# 1. 训练配置
+# ===============================
+TRAIN:
+  STAGE: vae
+  DATASETS: ['uestc']
+  NUM_WORKERS: 11
+  BATCH_SIZE: 128
+  START_EPOCH: 0
+  END_EPOCH: 6000
+  RESUME: ''  # 若中断恢复，可填写 checkpoint 路径
+  PRETRAINED_VAE: ''
+  OPTIM:
+    TYPE: AdamW
+    LR: 1e-4
+
+# ===============================
+# 2. 验证配置
+# ===============================
+EVAL:
+  DATASETS: ['uestc']
+  BATCH_SIZE: 32
+  SPLIT: test  # 推荐使用 test split 验证
+
+# ===============================
+# 3. 测试配置
+# ===============================
+TEST:
+  CHECKPOINTS: ''
+  DATASETS: ['uestc']
+  SPLIT: test
+  BATCH_SIZE: 32
+  MEAN: False
+  NUM_SAMPLES: 1
+  FACT: 1
+
+# ===============================
+# 4. 数据集配置
+# ===============================
+DATASET:
+  JOINT_TYPE: 'uestc'
+  UESTC:
+    NUM_FRAMES: 60
+    POSE_REP: rot6d
+    GLOB: True
+    TRANSLATION: True
+  SAMPLER:
+    MAX_LEN: -1
+    MIN_LEN: -1
+    MAX_SQE: -1
+    SAMPLING: conseq
+    SAMPLING_STEP: 1
+
+# ===============================
+# 5. 评估指标
+# ===============================
+METRIC:
+  TYPE: ['UESTCMetrics']
+
+# ===============================
+# 6. 损失函数设置
+# ===============================
+LOSS:
+  TYPE: mld
+  LAMBDA_KL: 1.0e-4
+  LAMBDA_REC: 1.0
+  DIST_SYNC_ON_STEP: False
+
+# ===============================
+# 7. 模型结构配置
+# ===============================
+model:
+  target: modules_humanact12
+  vae: true
+  model_type: mld
+  condition: 'action'
+  latent_dim: [1, 256]
+  ff_size: 1024
+  num_layers: 9
+  num_head: 4
+  droupout: 0.1
+  activation: gelu
+  guidance_scale: 1.0
+  guidance_uncondp: 0.0
+
+# ===============================
+# 8. 日志与保存
+# ===============================
+LOGGER:
+  SACE_CHECKPOINT_EPOCH: 100
+  LOG_EVERY_STEPS: 1
+  VAL_EVERY_STEPS: 50
+  TENSORBOARD: True
+  WANDB:
+    PROJECT: null
+    OFFLINE: False
+    RESUME_ID: null
+
+# ===============================
+# 9. 其他（路径等）
+# ===============================
+MODEL:
+  UESTC_REC_PATH: './deps/actionrecognition'

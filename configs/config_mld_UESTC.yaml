@@ -1,0 +1,107 @@
+# 1. 实验名称更新，以反映这是在UESTC上训练Diffusion模型
+NAME: score_baseline_uestc_diffusion_train_CoDiff 
+DEBUG: False
+ACCELERATOR: 'gpu'
+DEVICE: [0]
+
+# Training configuration
+TRAIN:
+  # 2. 关键修改：将训练阶段从 'vae' 切换到 'diffusion'
+  STAGE: diffusion 
+  
+  DATASETS: ['uestc'] 
+  NUM_WORKERS: 16
+  BATCH_SIZE: 64 # Diffusion阶段通常需要比VAE更小的batch size以适应更大的模型
+  
+  # 3. 设置Diffusion阶段的训练轮数，2000-3000是一个可靠的范围
+  END_EPOCH: 3000 
+  
+  RESUME: '' # 这是新训练，不是恢复中断的训练，所以清空
+
+  # 4. 关键修改：填入您刚刚训练好的VAE检查点的【完整正确路径】
+  PRETRAINED_VAE: 'experiments/mld/uestc_vae_train/checkpoints/epoch=1799.ckpt' # <-- 请将'xxxx'替换为实际的epoch数
+  
+  OPTIM:
+    TYPE: AdamW
+    LR: 1e-4 
+  
+  ABLATION:
+    SKIP_CONNECT: True
+    PE_TYPE: mld
+    DIFF_PE_TYPE: mld
+
+# Evaluating Configuration
+EVAL:
+  DATASETS: ['uestc']
+  BATCH_SIZE: 32
+  SPLIT: test
+
+# Test Configuration
+TEST:
+  CHECKPOINTS: 'experiments/mld/baseline_uestc_diffusion_train_CoDiff/checkpoints/epoch=1999.ckpt' # 测试时再填写
+  DATASETS: ['uestc']
+  SPLIT: train
+  BATCH_SIZE: 32
+  # ...
+
+# Datasets Configuration
+DATASET:
+  JOINT_TYPE: 'uestc' 
+  UESTC:
+    NUM_FRAMES: 60
+    POSE_REP: rot6d
+    GLOB: True
+    TRANSLATION: True
+  SAMPLER:
+    REQUEST_FRAMES: null
+    SAMPLING: conseq
+    SAMPLING_STEP: 1
+    MAX_SQE: -1
+    MAX_LEN: 60
+    MIN_LEN: -1
+    MAX_TEXT_LEN: 20
+
+METRIC:
+  TYPE: ['UESTCMetrics']
+
+# Losses Configuration
+LOSS:
+  TYPE: mld 
+  LAMBDA_KL: 1.0e-4 
+  LAMBDA_REC: 1.0 
+  DIST_SYNC_ON_STEP: False
+
+# Model Configuration
+model:
+  # 5. 关键修改：为UESTC指定正确的模块配置路径
+  target: modules_humanact12
+  vae: true 
+  model_type: mld
+  condition: 'action'
+  latent_dim: [1, 256] 
+  ff_size: 1024 
+  # Denoiser的层数通常比VAE多
+  num_layers: 15 
+  num_head: 4 
+  droupout: 0.1
+  activation: gelu
+  guidance_scale: 7.5
+  guidance_uncondp: 0.1
+  
+  # 6. 确保您的CLE模块被激活
+  use_latent_enhancer: true
+  latent_enhancer_heads: 8 
+
+MODEL:
+  UESTC_REC_PATH: './deps/actionrecognition'
+
+# Logger configuration
+LOGGER:
+  SACE_CHECKPOINT_EPOCH: 200
+  LOG_EVERY_STEPS: 1
+  VAL_EVERY_STEPS: 50
+  TENSORBOARD: True
+  WANDB:
+    PROJECT: null
+    OFFLINE: False
+    RESUME_ID: null
